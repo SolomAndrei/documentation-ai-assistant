@@ -1,10 +1,19 @@
 import { resolve } from 'path'
-import { defineConfig } from 'electron-vite'
+import { defineConfig, swcPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  main: {},
-  preload: {},
+  main: {
+    build: {
+      externalizeDeps: true
+    },
+    plugins: [swcPlugin()]
+  },
+  preload: {
+    build: {
+      externalizeDeps: true
+    }
+  },
   renderer: {
     resolve: {
       alias: {
