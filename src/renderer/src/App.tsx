@@ -1,27 +1,43 @@
 import { useEffect, useState } from 'react'
+import { configureApiClient } from './api/api-client'
+import { DocumentsSidebar } from './components/organisms/DocumentsSidebar'
+import { Workspace } from './components/organisms/Workspace'
+import { useDocumentStatusEvents } from './features/documents/useDocumentStatusEvents'
 
 function App(): React.JSX.Element {
-  const [message, setMessage] = useState<string>('Loading...')
+  const [isApiReady, setIsApiReady] = useState(false)
 
   useEffect(() => {
-    async function fetchFromNest(): Promise<void> {
+    async function initApi(): Promise<void> {
       const port = await window.api.getApiPort()
-      const apiUrl = `http://localhost:${port}/api`
-      try {
-        const response = await fetch(`${apiUrl}/hello`)
-        const data = await response.json()
-        setMessage(data.message)
-      } catch (error) {
-        setMessage('Ошибка подключения к бэкенду')
-        console.error(error)
-      }
+      configureApiClient(`http://localhost:${port}`)
+      setIsApiReady(true)
     }
-    fetchFromNest()
+
+    initApi().catch((error) => {
+      console.error(error)
+      setIsApiReady(false)
+    })
   }, [])
+
+  if (!isApiReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
+        Connecting to local API...
+      </div>
+    )
+  }
+
+  return <AppShell />
+}
+
+function AppShell(): React.JSX.Element {
+  useDocumentStatusEvents()
+
   return (
-    <div>
-      <h1>RAG Application</h1>
-      <p>Ответ сервера: {message}</p>
+    <div className="grid min-h-screen grid-cols-[380px_1fr] bg-slate-950 text-slate-100 max-[900px]:grid-cols-1">
+      <DocumentsSidebar />
+      <Workspace />
     </div>
   )
 }

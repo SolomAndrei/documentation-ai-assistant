@@ -1,11 +1,14 @@
 import { resolve } from 'path'
 import { defineConfig, swcPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   main: {
     build: {
-      externalizeDeps: true
+      externalizeDeps: {
+        exclude: ['@minnzen/sqliteq']
+      }
     },
     plugins: [swcPlugin()]
   },
@@ -20,6 +23,6 @@ export default defineConfig({
         '@renderer': resolve('src/renderer/src')
       }
     },
-    plugins: [react()]
+    plugins: [react(), tailwindcss()]
   }
 })

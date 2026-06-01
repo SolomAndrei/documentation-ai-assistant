@@ -5,17 +5,22 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { NestFactory } from '@nestjs/core'
 import { AppModule } from './nest-app/app.module'
 import { getPort } from 'get-port-please'
+import { BackendLogger } from './nest-app/logger'
+import { Logger } from '@nestjs/common'
 
 let nestPort: number
 
 async function bootstrapNest(): Promise<number> {
   nestPort = await getPort({ port: 3000 })
-  const nestApp = await NestFactory.create(AppModule)
+  const nestApp = await NestFactory.create(AppModule, {
+    logger: new BackendLogger()
+  })
 
   nestApp.enableCors()
 
   await nestApp.listen(nestPort)
-  console.log(`[Main] NestJS is running on: http://localhost:${nestPort}`)
+
+  Logger.log(`NestJS is running on: http://localhost:${nestPort}`, 'Main')
   return nestPort
 }
 function createWindow(): void {

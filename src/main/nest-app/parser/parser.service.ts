@@ -1,21 +1,22 @@
-import { Inject, Injectable } from '@nestjs/common'
-import { Queue } from '@minnzen/sqliteq'
-import { SQLITE_QUEUE_TOKEN, LANCE_DB_TOKEN } from '../database/database.module'
-import { Connection } from '@lancedb/lancedb'
+import { Injectable, Logger } from '@nestjs/common'
+import { readFile } from 'node:fs/promises'
 
-export interface DocumentJob {
+export interface ParsedDocument {
   filePath: string
+  text: string
 }
 
 @Injectable()
 export class ParserService {
-  constructor(
-    @Inject(SQLITE_QUEUE_TOKEN) private readonly sqliteQueue: Queue<DocumentJob>,
-    @Inject(LANCE_DB_TOKEN) private readonly lanceDb: Connection
-  ) {}
+  private readonly logger = new Logger(ParserService.name)
 
-  async addJob(filePath: string): Promise<void> {
-    this.sqliteQueue.send({ filePath })
-    console.log(`[Queue] Added job for file: ${filePath}`)
+  async parseDocument(filePath: string): Promise<ParsedDocument> {
+    this.logger.log(`Parsing document: ${filePath}`)
+    const text = await readFile(filePath, 'utf-8')
+
+    return {
+      filePath,
+      text
+    }
   }
 }

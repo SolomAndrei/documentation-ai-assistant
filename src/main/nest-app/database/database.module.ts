@@ -1,21 +1,13 @@
-import { app } from 'electron'
 import { join } from 'path'
-import * as fs from 'fs'
 import { Global, Module } from '@nestjs/common'
 import Database from 'better-sqlite3'
 import { Queue } from '@minnzen/sqliteq'
 import * as lancedb from '@lancedb/lancedb'
+import { getDatabaseDir } from '../common/paths'
 
 export const SQLITE_QUEUE_TOKEN = 'SQLITE_QUEUE_TOKEN'
 export const LANCE_DB_TOKEN = 'LANCE_DB_TOKEN'
-
-export function getDatabaseDir(): string {
-  const databaseDir = join(app.getPath('userData'), 'rag-database')
-  if (!fs.existsSync(databaseDir)) {
-    fs.mkdirSync(databaseDir, { recursive: true })
-  }
-  return databaseDir
-}
+export const DOCUMENTS_DB_TOKEN = 'DOCUMENTS_DB_TOKEN'
 
 @Global()
 @Module({
@@ -38,8 +30,18 @@ export function getDatabaseDir(): string {
         const lanceDb = await lancedb.connect(lancePath)
         return lanceDb
       }
+    },
+    {
+      provide: DOCUMENTS_DB_TOKEN,
+      useFactory: () => {
+        const baseDir = getDatabaseDir()
+        const dbPath = join(baseDir, 'documents.db')
+        const db = new Database(dbPath)
+        db.pragma('journal_mode = WAL')
+        return db
+      }
     }
   ],
-  exports: [SQLITE_QUEUE_TOKEN, LANCE_DB_TOKEN]
+  exports: [SQLITE_QUEUE_TOKEN, LANCE_DB_TOKEN, DOCUMENTS_DB_TOKEN]
 })
 export class DatabaseModule {}
