@@ -56,7 +56,7 @@ export function FileDropzone({
     >
       <input
         ref={fileInputRef}
-        accept=".pdf,.html,.htm,.txt"
+        accept=".pdf,.html,.htm,.txt,.md,.markdown"
         hidden
         type="file"
         onChange={handleFileChange}
