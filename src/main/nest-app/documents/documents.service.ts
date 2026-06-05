@@ -3,7 +3,8 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
-  NotFoundException
+  NotFoundException,
+  Inject
 } from '@nestjs/common'
 import { DocumentRecord, DocumentRecordsRepository } from './document-records.repository'
 import { DocumentQueueService } from '../queue/document-queue.service'
@@ -15,6 +16,10 @@ import {
 } from './document-collections.repository'
 import { DatabaseUnitOfWork } from '../database/database-unit-of-work.service'
 import { DocumentContentsRepository } from './document-contents.repository'
+import {
+  DOCUMENT_CHUNKS_REPOSITORY,
+  type DocumentChunksRepositoryPort
+} from './ports/document-chunks.repository.port'
 
 export interface UploadDocumentResult {
   success: boolean
@@ -42,7 +47,9 @@ export class DocumentsService {
     private readonly documentStatusEvents: DocumentStatusEventsService,
     private readonly documentCollectionsRepository: DocumentCollectionsRepository,
     private readonly documentContentsRepository: DocumentContentsRepository,
-    private readonly databaseUnitOfWork: DatabaseUnitOfWork
+    private readonly databaseUnitOfWork: DatabaseUnitOfWork,
+    @Inject(DOCUMENT_CHUNKS_REPOSITORY)
+    private readonly documentChunksRepository: DocumentChunksRepositoryPort
   ) {}
 
   async uploadDocument(file: Express.Multer.File): Promise<UploadDocumentResult> {
@@ -184,12 +191,13 @@ export class DocumentsService {
     }
 
     this.databaseUnitOfWork.run(() => {
+      this.documentChunksRepository.deleteByDocumentId(document.id)
       this.documentContentsRepository.deleteByDocumentId(document.id)
       this.documentRecordsRepository.deleteById(document.id)
       const remainingDocuments = this.documentRecordsRepository.listByCollectionId(
         document.collectionId
       )
-      if (remainingDocuments.length) {
+      if (!remainingDocuments.length) {
         this.documentCollectionsRepository.deleteById(document.collectionId)
       }
     })

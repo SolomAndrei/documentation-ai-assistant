@@ -1,9 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common'
+import { Inject, Injectable, Logger } from '@nestjs/common'
 import { DocumentRecordsRepository } from '../documents/document-records.repository'
 import { ParserService } from '../parser/parser.service'
 import { DocumentStatusEventsService } from '../documents/document-status-events.service'
 import { DocumentContentsRepository } from '../documents/document-contents.repository'
 import { chankMarkdown } from '../chunking/markdown-chunker'
+import {
+  DOCUMENT_CHUNKS_REPOSITORY,
+  type DocumentChunksRepositoryPort
+} from '../documents/ports/document-chunks.repository.port'
+import { DatabaseUnitOfWork } from '../database/database-unit-of-work.service'
 
 @Injectable()
 export class DocumentProcessingService {
@@ -13,7 +18,10 @@ export class DocumentProcessingService {
     private readonly parserService: ParserService,
     private readonly documentRecordsRepository: DocumentRecordsRepository,
     private readonly documentStatusEvents: DocumentStatusEventsService,
-    private readonly documentContentsRepository: DocumentContentsRepository
+    private readonly documentContentsRepository: DocumentContentsRepository,
+    @Inject(DOCUMENT_CHUNKS_REPOSITORY)
+    private readonly documentChunksRepository: DocumentChunksRepositoryPort,
+    private readonly databaseUnitOfWork: DatabaseUnitOfWork
   ) {}
 
   async processDocument(documentId: string, filePath: string): Promise<void> {
@@ -32,12 +40,19 @@ export class DocumentProcessingService {
     }
     try {
       const parsedDocument = await this.parserService.parseDocument(filePath)
-
-      this.documentContentsRepository.saveParsedContent(documentId, parsedDocument.text)
       const chunks = chankMarkdown(parsedDocument.text, { maxChunkSize: 2000 })
+
+      const completedDocument = this.databaseUnitOfWork.run(() => {
+        this.documentContentsRepository.saveParsedContent(documentId, parsedDocument.text)
+        this.documentChunksRepository.replaceChunksForDocument({
+          collectionId: document.collectionId,
+          documentId,
+          chunks
+        })
+        return this.documentRecordsRepository.updateStatus(documentId, 'completed')
+      })
       this.logger.log(`Created document chunks: ${chunks.length}`)
 
-      const completedDocument = this.documentRecordsRepository.updateStatus(documentId, 'completed')
       if (completedDocument) {
         this.documentStatusEvents.notifyStatusChanged(completedDocument)
       }
