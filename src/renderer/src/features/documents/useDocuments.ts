@@ -89,7 +89,7 @@ export function useDocumentsList(): UseDocumentsListResult {
         selectDocument(null)
       }
 
-      await queryClient.invalidateQueries({ queryKey: documentsQueryKey })
+      await invalidateDocumentsAndCollections()
     }
   })
 

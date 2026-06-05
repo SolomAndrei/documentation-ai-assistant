@@ -186,6 +186,12 @@ export class DocumentsService {
     this.databaseUnitOfWork.run(() => {
       this.documentContentsRepository.deleteByDocumentId(document.id)
       this.documentRecordsRepository.deleteById(document.id)
+      const remainingDocuments = this.documentRecordsRepository.listByCollectionId(
+        document.collectionId
+      )
+      if (remainingDocuments.length) {
+        this.documentCollectionsRepository.deleteById(document.collectionId)
+      }
     })
 
     this.logger.log(`Document deleted: ${document.id}`)

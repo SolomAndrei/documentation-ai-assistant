@@ -7,6 +7,8 @@ import { AppModule } from './nest-app/app.module'
 import { getPort } from 'get-port-please'
 import { BackendLogger } from './nest-app/logger'
 import { Logger } from '@nestjs/common'
+import installExtension, { REDUX_DEVTOOLS } from 'electron-devtools-installer'
+import log from 'electron-log/main'
 
 let nestPort: number
 
@@ -23,6 +25,20 @@ async function bootstrapNest(): Promise<number> {
   Logger.log(`NestJS is running on: http://localhost:${nestPort}`, 'Main')
   return nestPort
 }
+
+async function installDevtoolsExtensions(): Promise<void> {
+  if (!is.dev) {
+    return
+  }
+
+  try {
+    const extensionName = await installExtension(REDUX_DEVTOOLS)
+    log.info(`Added Extension: ${extensionName}`)
+  } catch (error) {
+    log.warn(`Failed to install Redux DevTools: ${String(error)}`)
+  }
+}
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1200,
@@ -56,6 +72,7 @@ app.whenReady().then(async () => {
     optimizer.watchWindowShortcuts(window)
   })
   await bootstrapNest()
+  await installDevtoolsExtensions()
   ipcMain.handle('get-api-port', () => nestPort)
   createWindow()
   app.on('activate', function () {
