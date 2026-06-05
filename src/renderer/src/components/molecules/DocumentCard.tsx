@@ -6,6 +6,7 @@ interface DocumentCardProps {
   document: DocumentRecord
   isSelected: boolean
   onDelete: (documentId: string) => void
+  onDeleteOriginal: (documentId: string) => void
   onParse: (documentId: string) => void
   onSelect: (documentId: string) => void
 }
@@ -22,9 +23,12 @@ export function DocumentCard({
   document,
   isSelected,
   onDelete,
+  onDeleteOriginal,
   onParse,
   onSelect
 }: DocumentCardProps): React.JSX.Element {
+  const canDeleteOriginal = document.status === 'completed' && !document.originalFileDeletedAt
+
   return (
     <article
       className={`flex flex-col gap-3 rounded-2xl border p-4 transition ${
@@ -45,13 +49,19 @@ export function DocumentCard({
         {formatFileSize(document.size)} · {new Date(document.createdAt).toLocaleString()}
       </div>
 
+      {document.originalFileDeletedAt && (
+        <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-2 text-xs text-emerald-100">
+          Original file removed. Parsed content is kept.
+        </div>
+      )}
+
       {document.errorMessage && (
         <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-2 text-xs text-red-100">
           {document.errorMessage}
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2">
         <Button
           disabled={!canStartParsing(document)}
           variant={document.status === 'failed' ? 'secondary' : 'primary'}
@@ -63,13 +73,23 @@ export function DocumentCard({
           {document.status === 'failed' ? 'Retry parsing' : 'Start parsing'}
         </Button>
         <Button
+          disabled={!canDeleteOriginal}
+          variant="secondary"
+          onClick={(event) => {
+            event.stopPropagation()
+            onDeleteOriginal(document.id)
+          }}
+        >
+          Delete original only
+        </Button>
+        <Button
           variant="danger"
           onClick={(event) => {
             event.stopPropagation()
             onDelete(document.id)
           }}
         >
-          Delete
+          Delete document and results
         </Button>
       </div>
     </article>

@@ -1,24 +1,27 @@
 import { Inject, Injectable } from '@nestjs/common'
 import { randomUUID } from 'crypto'
 import Database from 'better-sqlite3'
-import { DOCUMENTS_DB_TOKEN } from '../database/database.module'
+import { DOCUMENTS_DB_TOKEN } from '../database/database.tokens'
 
 export type DocumentStatus = 'uploaded' | 'queued' | 'processing' | 'completed' | 'failed'
 
 export interface DocumentRecord {
   id: string
+  collectionId: string
   originalName: string
   filePath: string
   mimeType: string | null
   size: number
   status: DocumentStatus
   errorMessage: string | null
+  originalFileDeletedAt: string | null
   createdAt: string
   updatedAt: string
 }
 
 export interface CreateDocumentInput {
   originalName: string
+  collectionId: string
   filePath: string
   mimeType: string | null
   size: number
@@ -26,12 +29,14 @@ export interface CreateDocumentInput {
 
 interface DocumentRow {
   id: string
+  collection_id: string
   original_name: string
   file_path: string
   mime_type: string | null
   size: number
   status: DocumentStatus
   error_message: string | null
+  original_file_deleted_at: string | null
   created_at: string
   updated_at: string
 }
@@ -50,23 +55,27 @@ export class DocumentRecordsRepository {
       .prepare(
         `INSERT INTO documents (
           id,
+          collection_id,
           original_name,
           file_path,
           mime_type,
           size,
           status,
           error_message,
+          original_file_deleted_at,
           created_at,
           updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         id,
+        input.collectionId,
         input.originalName,
         input.filePath,
         input.mimeType,
         input.size,
         'uploaded',
+        null,
         null,
         now,
         now
@@ -97,6 +106,14 @@ export class DocumentRecordsRepository {
     return row ? this.mapRow(row) : null
   }
 
+  listByCollectionId(collectionId: string): DocumentRecord[] {
+    const rows = this.db
+      .prepare('SELECT * FROM documents WHERE collection_id = ? ORDER BY created_at DESC')
+      .all(collectionId) as DocumentRow[]
+
+    return rows.map((row) => this.mapRow(row))
+  }
+
   updateStatus(
     id: string,
     status: DocumentStatus,
@@ -111,6 +128,16 @@ export class DocumentRecordsRepository {
     return this.findById(id)
   }
 
+  markOriginalFileDeleted(id: string): DocumentRecord | null {
+    const now = new Date().toISOString()
+
+    this.db
+      .prepare('UPDATE documents SET original_file_deleted_at = ?, updated_at = ? WHERE id = ?')
+      .run(now, now, id)
+
+    return this.findById(id)
+  }
+
   deleteById(id: string): void {
     this.db.prepare('DELETE FROM documents WHERE id = ?').run(id)
   }
@@ -119,12 +146,14 @@ export class DocumentRecordsRepository {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS documents (
         id TEXT PRIMARY KEY,
+        collection_id TEXT NOT NULL,
         original_name TEXT NOT NULL,
         file_path TEXT NOT NULL,
         mime_type TEXT,
         size INTEGER NOT NULL,
         status TEXT NOT NULL,
         error_message TEXT,
+        original_file_deleted_at TEXT,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
       );
@@ -137,12 +166,14 @@ export class DocumentRecordsRepository {
   private mapRow(row: DocumentRow): DocumentRecord {
     return {
       id: row.id,
+      collectionId: row.collection_id,
       originalName: row.original_name,
       filePath: row.file_path,
       mimeType: row.mime_type,
       size: row.size,
       status: row.status,
       errorMessage: row.error_message,
+      originalFileDeletedAt: row.original_file_deleted_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at
     }

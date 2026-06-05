@@ -4,10 +4,8 @@ import Database from 'better-sqlite3'
 import { Queue } from '@minnzen/sqliteq'
 import * as lancedb from '@lancedb/lancedb'
 import { getDatabaseDir } from '../common/paths'
-
-export const SQLITE_QUEUE_TOKEN = 'SQLITE_QUEUE_TOKEN'
-export const LANCE_DB_TOKEN = 'LANCE_DB_TOKEN'
-export const DOCUMENTS_DB_TOKEN = 'DOCUMENTS_DB_TOKEN'
+import { DatabaseUnitOfWork } from './database-unit-of-work.service'
+import { DOCUMENTS_DB_TOKEN, LANCE_DB_TOKEN, SQLITE_QUEUE_TOKEN } from './database.tokens'
 
 @Global()
 @Module({
@@ -40,8 +38,9 @@ export const DOCUMENTS_DB_TOKEN = 'DOCUMENTS_DB_TOKEN'
         db.pragma('journal_mode = WAL')
         return db
       }
-    }
+    },
+    DatabaseUnitOfWork
   ],
-  exports: [SQLITE_QUEUE_TOKEN, LANCE_DB_TOKEN, DOCUMENTS_DB_TOKEN]
+  exports: [SQLITE_QUEUE_TOKEN, LANCE_DB_TOKEN, DOCUMENTS_DB_TOKEN, DatabaseUnitOfWork]
 })
 export class DatabaseModule {}

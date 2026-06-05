@@ -6,13 +6,20 @@ import {
   Get,
   Param,
   Post,
+  UploadedFiles,
   UploadedFile,
   UseInterceptors
 } from '@nestjs/common'
-import { FileInterceptor } from '@nestjs/platform-express'
+import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express'
 import type { Express } from 'express'
+import { DocumentCollection } from './document-collections.repository'
 import { DocumentRecord } from './document-records.repository'
-import { DeleteDocumentResult, DocumentsService, UploadDocumentResult } from './documents.service'
+import {
+  DeleteDocumentResult,
+  DocumentsService,
+  UploadDocumentCollectionResult,
+  UploadDocumentResult
+} from './documents.service'
 import { Observable, map } from 'rxjs'
 import { MessageEvent, Sse } from '@nestjs/common'
 import { DocumentStatusEventsService } from './document-status-events.service'
@@ -33,14 +40,54 @@ export class DocumentsController {
     return this.documentsService.uploadDocument(file)
   }
 
+  @Post('collections/upload')
+  @UseInterceptors(FilesInterceptor('files'))
+  async uploadDocumentCollection(
+    @UploadedFiles() files: Express.Multer.File[]
+  ): Promise<UploadDocumentCollectionResult> {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('At least one file is required')
+    }
+
+    return this.documentsService.uploadDocumentCollection(files)
+  }
+
   @Get()
   listDocuments(): DocumentRecord[] {
     return this.documentsService.listDocuments()
   }
 
+  @Get('collections')
+  listCollections(): DocumentCollection[] {
+    return this.documentsService.listCollections()
+  }
+
+  @Post('collections/:collectionId/documents')
+  @UseInterceptors(FilesInterceptor('files'))
+  async addDocumentsToCollection(
+    @Param('collectionId') collectionId: string,
+    @UploadedFiles() files: Express.Multer.File[]
+  ): Promise<UploadDocumentCollectionResult> {
+    if (!files || files.length === 0) {
+      throw new BadRequestException('At least one file is required')
+    }
+
+    return this.documentsService.addDocumentsToCollection(collectionId, files)
+  }
+
+  @Post('collections/:collectionId/parse')
+  async parseCollection(@Param('collectionId') collectionId: string): Promise<DocumentRecord[]> {
+    return this.documentsService.queueCollectionParsing(collectionId)
+  }
+
   @Post(':id/parse')
   async parseDocument(@Param('id') id: string): Promise<DocumentRecord> {
     return this.documentsService.queueDocumentParsing(id)
+  }
+
+  @Delete(':id/original-file')
+  async deleteOriginalFile(@Param('id') id: string): Promise<DocumentRecord> {
+    return this.documentsService.deleteOriginalFile(id)
   }
 
   @Delete(':id')

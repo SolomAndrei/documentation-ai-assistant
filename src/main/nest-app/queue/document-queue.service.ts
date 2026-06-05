@@ -1,6 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common'
 import { Queue } from '@minnzen/sqliteq'
-import { SQLITE_QUEUE_TOKEN } from '../database/database.module'
+import { SQLITE_QUEUE_TOKEN } from '../database/database.tokens'
 import { QueueEventsService } from './queue-events.service'
 
 export interface DocumentProcessingJob {

@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common'
 import Database from 'better-sqlite3'
-import { DOCUMENTS_DB_TOKEN } from '../database/database.module'
+import { DOCUMENTS_DB_TOKEN } from '../database/database.tokens'
 
 export interface DocumentContent {
   documentId: string
@@ -30,6 +30,10 @@ export class DocumentContentsRepository {
           updated_at = excluded.updated_at`
       )
       .run(documentId, markdown, now, now)
+  }
+
+  deleteByDocumentId(documentId: string): void {
+    this.db.prepare('DELETE FROM document_contents WHERE document_id = ?').run(documentId)
   }
 
   private ensureSchema(): void {

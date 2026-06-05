@@ -2,22 +2,26 @@ import { useRef, useState } from 'react'
 
 interface FileDropzoneProps {
   isUploading: boolean
-  onFileSelected: (file: File) => void
+  label?: string
+  multiple?: boolean
+  onFilesSelected: (files: File[]) => void
 }
 
 export function FileDropzone({
   isUploading,
-  onFileSelected
+  label = 'Drop documents here',
+  multiple = false,
+  onFilesSelected
 }: FileDropzoneProps): React.JSX.Element {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [isDragging, setIsDragging] = useState(false)
 
   function handleFileChange(event: React.ChangeEvent<HTMLInputElement>): void {
-    const file = event.target.files?.[0]
+    const files = Array.from(event.target.files ?? [])
     event.target.value = ''
 
-    if (file) {
-      onFileSelected(file)
+    if (files.length > 0) {
+      onFilesSelected(files)
     }
   }
 
@@ -25,10 +29,10 @@ export function FileDropzone({
     event.preventDefault()
     setIsDragging(false)
 
-    const file = event.dataTransfer.files[0]
+    const files = Array.from(event.dataTransfer.files)
 
-    if (file) {
-      onFileSelected(file)
+    if (files.length > 0) {
+      onFilesSelected(multiple ? files : files.slice(0, 1))
     }
   }
 
@@ -58,12 +62,11 @@ export function FileDropzone({
         ref={fileInputRef}
         accept=".pdf,.html,.htm,.txt,.md,.markdown"
         hidden
+        multiple={multiple}
         type="file"
         onChange={handleFileChange}
       />
-      <strong className="text-slate-100">
-        {isUploading ? 'Uploading...' : 'Drop a document here'}
-      </strong>
+      <strong className="text-slate-100">{isUploading ? 'Uploading...' : label}</strong>
       <span className="text-sm text-slate-400">or choose it from your file system</span>
     </div>
   )
