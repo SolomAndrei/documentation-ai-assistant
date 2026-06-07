@@ -27,8 +27,13 @@ export class DocumentChunksRepository implements DocumentChunksRepositoryPort {
     this.ensureSchema()
   }
 
-  replaceChunksForDocument({ collectionId, documentId, chunks }: ReplaceDocumentChunksInput): void {
+  replaceChunksForDocument({
+    collectionId,
+    documentId,
+    chunks
+  }: ReplaceDocumentChunksInput): DocumentChunk[] {
     const now = new Date().toISOString()
+    const savedChunks: DocumentChunk[] = []
 
     const deleteOldChunks = this.db.prepare('DELETE FROM document_chunks WHERE document_id = ?')
     const insertChunk = this.db.prepare(
@@ -45,8 +50,20 @@ export class DocumentChunksRepository implements DocumentChunksRepositoryPort {
     deleteOldChunks.run(documentId)
 
     for (const [index, text] of chunks.entries()) {
-      insertChunk.run(randomUUID(), collectionId, documentId, index, text, now)
+      const id = randomUUID()
+      insertChunk.run(id, collectionId, documentId, index, text, now)
+
+      savedChunks.push({
+        id,
+        collectionId,
+        documentId,
+        chunkIndex: index,
+        text,
+        createdAt: now
+      })
     }
+
+    return savedChunks
   }
 
   listByDocumentId(documentId: string): DocumentChunk[] {

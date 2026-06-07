@@ -5,6 +5,7 @@ declare global {
     electron: ElectronAPI
     api: {
       getApiPort: () => Promise<number>
+      quitApp: () => Promise<void>
     }
   }
 }

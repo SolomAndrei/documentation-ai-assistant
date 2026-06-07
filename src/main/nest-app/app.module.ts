@@ -3,9 +3,10 @@ import { AppController } from './app.controller'
 import { DatabaseModule } from './database/database.module'
 import { DocumentsModule } from './documents/documents.module'
 import { ParserModule } from './parser/parser.module'
+import { AiModule } from './ai/ai.module'
 
 @Module({
-  imports: [DatabaseModule, DocumentsModule, ParserModule],
+  imports: [DatabaseModule, DocumentsModule, ParserModule, AiModule],
   controllers: [AppController],
   providers: []
 })

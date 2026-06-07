@@ -19,7 +19,6 @@ async function bootstrapNest(): Promise<number> {
   })
 
   nestApp.enableCors()
-
   await nestApp.listen(nestPort)
 
   Logger.log(`NestJS is running on: http://localhost:${nestPort}`, 'Main')
@@ -74,6 +73,9 @@ app.whenReady().then(async () => {
   await bootstrapNest()
   await installDevtoolsExtensions()
   ipcMain.handle('get-api-port', () => nestPort)
+  ipcMain.handle('quit-app', () => {
+    app.quit()
+  })
   createWindow()
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

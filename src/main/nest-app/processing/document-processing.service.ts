@@ -9,19 +9,23 @@ import {
   type DocumentChunksRepositoryPort
 } from '../documents/ports/document-chunks.repository.port'
 import { DatabaseUnitOfWork } from '../database/database-unit-of-work.service'
+import { EMBEDDING_PROVIDER, type EmbeddingProviderPort } from '../ai/ports/embedding-provider.port'
 
 @Injectable()
 export class DocumentProcessingService {
   private readonly logger = new Logger(DocumentProcessingService.name)
 
   constructor(
+    @Inject(DOCUMENT_CHUNKS_REPOSITORY)
+    private readonly documentChunksRepository: DocumentChunksRepositoryPort,
+    @Inject(EMBEDDING_PROVIDER)
+    private readonly embeddingProvider: EmbeddingProviderPort,
+    private readonly databaseUnitOfWork: DatabaseUnitOfWork,
+
     private readonly parserService: ParserService,
     private readonly documentRecordsRepository: DocumentRecordsRepository,
     private readonly documentStatusEvents: DocumentStatusEventsService,
-    private readonly documentContentsRepository: DocumentContentsRepository,
-    @Inject(DOCUMENT_CHUNKS_REPOSITORY)
-    private readonly documentChunksRepository: DocumentChunksRepositoryPort,
-    private readonly databaseUnitOfWork: DatabaseUnitOfWork
+    private readonly documentContentsRepository: DocumentContentsRepository
   ) {}
 
   async processDocument(documentId: string, filePath: string): Promise<void> {
@@ -33,6 +37,7 @@ export class DocumentProcessingService {
     }
 
     this.logger.log(`Processing document: ${documentId}`)
+
     const processingDocument = this.documentRecordsRepository.updateStatus(documentId, 'processing')
 
     if (processingDocument) {
@@ -42,16 +47,21 @@ export class DocumentProcessingService {
       const parsedDocument = await this.parserService.parseDocument(filePath)
       const chunks = chankMarkdown(parsedDocument.text, { maxChunkSize: 2000 })
 
-      const completedDocument = this.databaseUnitOfWork.run(() => {
+      const savedChunks = this.databaseUnitOfWork.run(() => {
         this.documentContentsRepository.saveParsedContent(documentId, parsedDocument.text)
-        this.documentChunksRepository.replaceChunksForDocument({
+
+        return this.documentChunksRepository.replaceChunksForDocument({
           collectionId: document.collectionId,
           documentId,
           chunks
         })
-        return this.documentRecordsRepository.updateStatus(documentId, 'completed')
       })
-      this.logger.log(`Created document chunks: ${chunks.length}`)
+      this.logger.log(`Created document chunks: ${savedChunks.length}`)
+      const embeddings = await this.embeddingProvider.embedBatch(
+        savedChunks.map((chunk) => chunk.text)
+      )
+      this.logger.log(`Created chunk embeddings: ${embeddings.length}`)
+      const completedDocument = this.documentRecordsRepository.updateStatus(documentId, 'completed')
 
       if (completedDocument) {
         this.documentStatusEvents.notifyStatusChanged(completedDocument)

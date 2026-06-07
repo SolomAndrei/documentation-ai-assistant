@@ -14,7 +14,7 @@ export interface ReplaceDocumentChunksInput {
 }
 
 export interface DocumentChunksRepositoryPort {
-  replaceChunksForDocument(input: ReplaceDocumentChunksInput): void
+  replaceChunksForDocument(input: ReplaceDocumentChunksInput): DocumentChunk[]
   listByDocumentId(documentId: string): DocumentChunk[]
   deleteByDocumentId(documentId: string): void
 }

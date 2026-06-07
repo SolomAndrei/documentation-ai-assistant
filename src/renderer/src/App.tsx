@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { configureApiClient } from './api/api-client'
-import { DocumentsSidebar } from './components/organisms/DocumentsSidebar'
-import { Workspace } from './components/organisms/Workspace'
-import { useDocumentStatusEvents } from './features/documents/useDocumentStatusEvents'
+import { AppLoadingScreen } from './components/organisms/AppLoadingScreen'
+import { AppShell } from './components/organisms/AppShell'
+import { LocalAiSetupScreen } from './components/organisms/LocalAiSetupScreen'
+import { useLocalAiSetup } from './features/local-ai/useLocalAiSetup'
 
 function App(): React.JSX.Element {
   const [isApiReady, setIsApiReady] = useState(false)
+  const localAiSetup = useLocalAiSetup(isApiReady)
 
   useEffect(() => {
     async function initApi(): Promise<void> {
@@ -21,25 +23,27 @@ function App(): React.JSX.Element {
   }, [])
 
   if (!isApiReady) {
+    return <AppLoadingScreen message="Connecting to local API..." />
+  }
+
+  if (!localAiSetup.status) {
+    return <AppLoadingScreen message="Checking local AI dependencies..." />
+  }
+
+  if (!localAiSetup.status.ready) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
-        Connecting to local API...
-      </div>
+      <LocalAiSetupScreen
+        items={localAiSetup.status.items}
+        setupEvent={localAiSetup.setupEvent}
+        onCancel={localAiSetup.cancel}
+        onInstall={localAiSetup.install}
+        isChecking={localAiSetup.isChecking}
+        isInstalling={localAiSetup.isInstalling}
+      />
     )
   }
 
   return <AppShell />
-}
-
-function AppShell(): React.JSX.Element {
-  useDocumentStatusEvents()
-
-  return (
-    <div className="grid min-h-screen grid-cols-[380px_1fr] bg-slate-950 text-slate-100 max-[900px]:grid-cols-1">
-      <DocumentsSidebar />
-      <Workspace />
-    </div>
-  )
 }
 
 export default App
