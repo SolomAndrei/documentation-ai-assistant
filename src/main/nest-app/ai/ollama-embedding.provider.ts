@@ -1,5 +1,6 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common'
 import type { EmbeddingProviderPort } from './ports/embedding-provider.port'
+import { OllamaRuntimeService } from './ollama-runtime.service'
 
 interface OllamaEmbedResponse {
   embeddings?: number[][]
@@ -7,8 +8,9 @@ interface OllamaEmbedResponse {
 
 @Injectable()
 export class OllamaEmbeddingProvider implements EmbeddingProviderPort {
-  private readonly baseUrl = 'http://localhost:11434'
   private readonly model = 'nomic-embed-text'
+
+  constructor(private readonly ollamaRuntimeService: OllamaRuntimeService) {}
 
   async embedText(text: string): Promise<number[]> {
     const [embedding] = await this.embedBatch([text])
@@ -20,7 +22,7 @@ export class OllamaEmbeddingProvider implements EmbeddingProviderPort {
       return []
     }
 
-    const response = await fetch(`${this.baseUrl}/api/embed`, {
+    const response = await fetch(`${this.ollamaRuntimeService.getBaseUrl()}/api/embed`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
